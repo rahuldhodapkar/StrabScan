@@ -1,3 +1,7 @@
+# Editor artifacts
 .DS_Store
 *.swp
 *.swo
+
+# Security
+*.pem

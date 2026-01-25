@@ -212,12 +212,27 @@ async function startCamera() {
     currentStream = await navigator.mediaDevices.getUserMedia(constraints);
     video.srcObject = currentStream;
     video.addEventListener("loadeddata", predictWebcam);
+    video.style.transform =
+      currentFacingMode === "user" ? "scaleX(-1)" : "scaleX(1)";
   } catch (err) {
     console.error("Camera error:", err);
   }
 }
 
+// ===========================================================
+// =========== BEGIN CAMERA TOGGLE CODE ======================
+// ===========================================================
 
+const switchCameraBtn = document.getElementById("switchCamera");
+
+switchCameraBtn.addEventListener("click", async () => {
+  currentFacingMode =
+    currentFacingMode === "user" ? "environment" : "user";
+
+  if (webcamRunning) {
+    await startCamera();
+  }
+});
 
 // ===========================================================
 // =========== BEGIN DRAWING CODE ============================
@@ -228,6 +243,11 @@ let lastVideoTime = -1
 let results = undefined
 const drawingUtils = new DrawingUtils(canvasCtx)
 async function predictWebcam() {
+  // set required transform for back and front facing camera support
+  
+  canvasElement.style.transform =
+      currentFacingMode === "user" ? "scaleX(-1)" : "scaleX(1)";
+
   const radio = video.videoHeight / video.videoWidth
   video.style.width = videoWidth + "px"
   video.style.height = videoWidth * radio + "px"
