@@ -26,6 +26,9 @@ let enableWebcamButton
 let webcamRunning = false
 const videoWidth = 480
 
+let currentFacingMode = "environment"; // "user" (front) | "environment" (back)
+let currentStream = null;
+
 // Before we can use HandLandmarker class we must wait for it to finish
 // loading. Machine Learning models can be large and take a moment to
 // get everything needed to run.
@@ -183,17 +186,43 @@ function enableCam(event) {
     enableWebcamButton.innerText = "DISABLE PREDICTIONS"
   }
 
-  // getUsermedia parameters.
-  const constraints = {
-    video: true
+  if (!webcamRunning && currentStream) {
+    currentStream.getTracks().forEach(track => track.stop());
+    return;
   }
 
-  // Activate the webcam stream.
-  navigator.mediaDevices.getUserMedia(constraints).then(stream => {
-    video.srcObject = stream
-    video.addEventListener("loadeddata", predictWebcam)
-  })
+  startCamera();
+
 }
+
+async function startCamera() {
+  if (currentStream) {
+    currentStream.getTracks().forEach(track => track.stop());
+  }
+
+  const constraints = {
+    video: {
+      facingMode: { ideal: currentFacingMode },
+      width: { ideal: 1280 },
+      height: { ideal: 720 }
+    }
+  };
+
+  try {
+    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = currentStream;
+    video.addEventListener("loadeddata", predictWebcam);
+  } catch (err) {
+    console.error("Camera error:", err);
+  }
+}
+
+
+
+// ===========================================================
+// =========== BEGIN DRAWING CODE ============================
+// ===========================================================
+
 
 let lastVideoTime = -1
 let results = undefined
