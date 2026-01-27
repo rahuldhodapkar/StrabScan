@@ -33,6 +33,10 @@ const videoWidth = 480
 let currentFacingMode = "environment"; // "user" (front) | "environment" (back)
 let currentStream = null;
 
+let PREDICTED_DEVIATION_SCALE_FACTOR = 0.34641
+let MAX_NUM_DEVIATION_OBSERVATIONS = 500
+
+let qualityControlPassedDeviationResults = []
 
 // right eye landmarks
 let MP_RT_IRIS_CENTER = 468
@@ -1213,9 +1217,7 @@ function calculateDeviation(landmarks) {
   return {
     deviationPD: valid ? degreesToPD(yawRt - yawLt) : NaN,
     predictedRt: reverseAlignment([predRt], R, s, t)[0],
-    predictedLt: reverseAlignment([predLt], R, s, t)[0],
-    yawRt,
-    yawLt,
+    predictedLt: reverseAlignment([predLt], R, s, t)[0]
   };
 }
 
@@ -1276,6 +1278,17 @@ function enableCam(event) {
   } else {
     webcamRunning = true
     enableWebcamButton.innerText = "DISABLE PREDICTIONS"
+
+    if (qualityControlPassedDeviationResults.length > 2) {
+      const mean = qualityControlPassedDeviationResults.reduce((a, b) => a + b, 0) / n;=
+      const variance = qualityControlPassedDeviationResults.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (n - 1);
+      const sd = Math.sqrt(variance)
+      document.getElementById("readout").textContent = (
+        "Deviation: " + mean(qualityControlPassedDeviationResults) +
+        " ± " + sd
+      )
+    }
+    qualityControlPassedDeviationResults = []
   }
 
   if (!webcamRunning && currentStream) {
@@ -1400,7 +1413,11 @@ async function predictWebcam() {
     // print the predicted deviation to console
     let deviationResults = calculateDeviation(results.faceLandmarks[0])
     console.log(deviationResults)
-
+    qualityControlPassedDeviationResults.push(
+      deviationResults.deviationPD * PREDICTED_DEVIATION_SCALE_FACTOR)
+    if(qualityControlPassedDeviationResults.length > MAX_NUM_DEVIATION_OBSERVATIONS) {
+      qualityControlPassedDeviationResults.shift()
+    }
 
     // DRAW PREDICTED LANDMARKS
     drawingUtils.drawLandmarks(
