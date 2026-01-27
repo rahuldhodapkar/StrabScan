@@ -1305,10 +1305,50 @@ async function startCamera() {
     video.addEventListener("loadeddata", predictWebcam);
     video.style.transform =
       currentFacingMode === "user" ? "scaleX(-1)" : "scaleX(1)";
+
+    checkBrowserZoomCapabilities()
+    checkCameraZoomCapabilities()
   } catch (err) {
     console.error("Camera error:", err);
   }
 }
+
+function checkBrowserZoomCapabilities(){
+  if (navigator.mediaDevices.getSupportedConstraints().zoom) {
+    console.log("Browser supports zoom");
+  }else{
+    alert("The browser does not support zoom.");
+  }
+}
+
+const zoomSlider = document.getElementById("zoomInput");
+
+zoomSlider.addEventListener("change", async () => {
+  let expectedZoom = document.getElementById("zoomInput").value;
+  const constraints = {advanced: [{zoom: expectedZoom}]};
+  const videoTracks = currentStream.getVideoTracks();
+  let track = videoTracks[0];
+  track.applyConstraints(constraints);
+  track.addEventListener("loadeddata", predictWebcam);
+});
+
+
+function checkCameraZoomCapabilities(){
+  const video = document.querySelector('video');
+  const videoTracks = currentStream.getVideoTracks();
+  let track = videoTracks[0];
+  let capabilities = track.getCapabilities();
+  if ('zoom' in capabilities) {
+    let min = capabilities["zoom"]["min"];
+    let max = capabilities["zoom"]["max"];
+    document.getElementById("zoomInput").setAttribute("min",min);
+    document.getElementById("zoomInput").setAttribute("max",max);
+    document.getElementById("zoomInput").value  = 1;
+  }else{
+    alert("This camera does not support zoom");
+  }
+}
+
 
 // ===========================================================
 // =========== BEGIN CAMERA TOGGLE CODE ======================
@@ -1356,7 +1396,7 @@ async function predictWebcam() {
     lastVideoTime = video.currentTime
     results = faceLandmarker.detectForVideo(video, startTimeMs)
   }
-  if (results.faceLandmarks) {
+  if (results.faceLandmarks && results.faceLandmarks[0]) {
     // print the predicted deviation to console
     let deviationResults = calculateDeviation(results.faceLandmarks[0])
     console.log(deviationResults)

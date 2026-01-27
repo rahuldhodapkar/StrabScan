@@ -37,6 +37,10 @@ limitations under the License. -->
         <span class="mdc-button__label">ENABLE WEBCAM</span>
       </button>
       <button id="switchCamera">Switch Camera</button>
+      <label>
+        Zoom:
+        <input type="range" min="0" max="2" id="zoomInput" value="0">
+      </label>
       <div style="position: relative;">
         <video id="webcam" style="position: abso" autoplay playsinline></video>
         <canvas class="output_canvas" id="output_canvas" style="position: absolute; left: 0px; top: 0px;"></canvas>
