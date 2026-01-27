@@ -1265,6 +1265,16 @@ if (hasGetUserMedia()) {
   console.warn("getUserMedia() is not supported by your browser")
 }
 
+
+function getMean(numbers) {
+  if (numbers.length === 0) {
+    return 0; // Prevents division by zero, which would result in NaN
+  }
+  const sum = numbers.reduce((accumulator, currentValue) => accumulator + currentValue, 0);
+  return sum / numbers.length;
+}
+
+
 // Enable the live webcam view and start detection.
 function enableCam(event) {
   if (!faceLandmarker) {
@@ -1275,20 +1285,30 @@ function enableCam(event) {
   if (webcamRunning === true) {
     webcamRunning = false
     enableWebcamButton.innerText = "ENABLE PREDICTIONS"
+
+    console.log(qualityControlPassedDeviationResults)
+    if (qualityControlPassedDeviationResults.length > 2) {
+
+
+      const n = qualityControlPassedDeviationResults.length
+      const mean = getMean(qualityControlPassedDeviationResults)
+      const variance = qualityControlPassedDeviationResults.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (n - 1);
+      const sd = Math.sqrt(variance)
+      document.getElementById("readout").innerHTML = (
+        "Deviation: " + mean +
+        " ± " + sd
+      )
+      console.log((
+        "Deviation: " + mean +
+        " ± " + sd
+      ))
+
+    }
+    qualityControlPassedDeviationResults = []
+
   } else {
     webcamRunning = true
     enableWebcamButton.innerText = "DISABLE PREDICTIONS"
-
-    if (qualityControlPassedDeviationResults.length > 2) {
-      const mean = qualityControlPassedDeviationResults.reduce((a, b) => a + b, 0) / n;=
-      const variance = qualityControlPassedDeviationResults.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (n - 1);
-      const sd = Math.sqrt(variance)
-      document.getElementById("readout").textContent = (
-        "Deviation: " + mean(qualityControlPassedDeviationResults) +
-        " ± " + sd
-      )
-    }
-    qualityControlPassedDeviationResults = []
   }
 
   if (!webcamRunning && currentStream) {
@@ -1413,10 +1433,15 @@ async function predictWebcam() {
     // print the predicted deviation to console
     let deviationResults = calculateDeviation(results.faceLandmarks[0])
     console.log(deviationResults)
-    qualityControlPassedDeviationResults.push(
-      deviationResults.deviationPD * PREDICTED_DEVIATION_SCALE_FACTOR)
-    if(qualityControlPassedDeviationResults.length > MAX_NUM_DEVIATION_OBSERVATIONS) {
-      qualityControlPassedDeviationResults.shift()
+
+    if (! Number.isNaN(deviationResults.deviationPD)) {
+      qualityControlPassedDeviationResults.push(
+        deviationResults.deviationPD * PREDICTED_DEVIATION_SCALE_FACTOR)
+      if(qualityControlPassedDeviationResults.length > MAX_NUM_DEVIATION_OBSERVATIONS) {
+        qualityControlPassedDeviationResults.shift()
+      }
+      document.getElementById("measurementProgress").value=qualityControlPassedDeviationResults.length
+      document.getElementById("measurementProgress").max=MAX_NUM_DEVIATION_OBSERVATIONS
     }
 
     // DRAW PREDICTED LANDMARKS
@@ -1487,7 +1512,7 @@ async function predictWebcam() {
       )
     }
   }
-  drawBlendShapes(videoBlendShapes, results.faceBlendshapes)
+  //drawBlendShapes(videoBlendShapes, results.faceBlendshapes)
 
   // Call this function again to keep predicting when the browser is ready.
   if (webcamRunning === true) {
