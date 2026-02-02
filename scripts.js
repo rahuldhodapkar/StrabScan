@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+console.log("starting load")
+
 import vision from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3"
 const { FaceLandmarker, FilesetResolver, DrawingUtils } = vision
 const demosSection = document.getElementById("demos")
@@ -71,6 +73,8 @@ let MP_LT_LIP_EDGE = 291
 
 let MP_RT_EAR = 234
 let MP_LT_EAR = 454
+
+console.log("===== loaded constants successfully =====")
 
 // ===========================================================
 // =========== INCLUDE BARYCENTRIC MODEL STRINGS =============
@@ -1029,6 +1033,8 @@ let bary_model_lt_string = `w_value,selected
 const bary_model_rt = Papa.parse(bary_model_rt_string, { header: true })
 const bary_model_lt = Papa.parse(bary_model_lt_string, { header: true })
 
+console.log("===== loaded barycentric models successfully =====")
+
 // ===========================================================
 // =========== SCRIPTS FOR STRAB MEASUREMENT =================
 // ===========================================================
@@ -1221,6 +1227,8 @@ function calculateDeviation(landmarks) {
   };
 }
 
+console.log("===== loaded strab measurement helper functions successfully =====")
+
 // ===========================================================
 // =========== INIT FACE LANDMARKER ==========================
 // ===========================================================
@@ -1240,7 +1248,11 @@ async function createFaceLandmarker() {
   })
   demosSection.classList.remove("invisible")
 }
-createFaceLandmarker()
+await createFaceLandmarker()
+
+
+console.log(faceLandmarker)
+console.log("===== loaded faceLandmarker successfully =====")
 
 // ===========================================================
 // =========== BEGIN WEBCAM INIT =============================
@@ -1276,7 +1288,7 @@ function getMean(numbers) {
 
 
 // Enable the live webcam view and start detection.
-function enableCam(event) {
+async function enableCam(event) {
   if (!faceLandmarker) {
     console.log("Wait! faceLandmarker not loaded yet.")
     return
@@ -1316,7 +1328,7 @@ function enableCam(event) {
     return;
   }
 
-  startCamera();
+  await startCamera();
 }
 
 async function startCamera() {
@@ -1394,7 +1406,8 @@ switchCameraBtn.addEventListener("click", async () => {
     currentFacingMode === "user" ? "environment" : "user";
 
   if (webcamRunning) {
-    await startCamera();
+    // await startCamera();
+    await enableCam()
   }
 });
 
