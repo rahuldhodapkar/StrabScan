@@ -37,13 +37,15 @@ limitations under the License. -->
         <span class="mdc-button__ripple"></span>
         <span class="mdc-button__label">ENABLE WEBCAM</span>
       </button>
-      <button id="switchCamera">Switch Camera</button>
+      <!-- <button id="switchCamera">Switch Camera</button> -->
+      <button id="toggleLight">TOGGLE LIGHT</button>
       <label>
         Zoom:
         <input type="range" min="0" max="2" id="zoomInput" value="0">
       </label>
       <div style="position: relative;">
         <video id="webcam" style="position: abso" autoplay playsinline></video>
+        <canvas id="video_freeze_canvas" style="position: absolute; left: 0px; top: 0px;"></canvas>
         <canvas class="output_canvas" id="output_canvas" style="position: absolute; left: 0px; top: 0px;"></canvas>
       </div>
     </div>

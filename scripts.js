@@ -35,6 +35,8 @@ const videoWidth = 480
 let currentFacingMode = "environment"; // "user" (front) | "environment" (back)
 let currentStream = null;
 
+let currentLightOnStatus = false;
+
 let PREDICTED_DEVIATION_SCALE_FACTOR = 0.34641
 let MAX_NUM_DEVIATION_OBSERVATIONS = 500
 
@@ -1234,19 +1236,24 @@ console.log("===== loaded strab measurement helper functions successfully ====="
 // ===========================================================
 
 async function createFaceLandmarker() {
-  const filesetResolver = await FilesetResolver.forVisionTasks(
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
-  )
-  faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
-    baseOptions: {
-      modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
-      delegate: "GPU"
-    },
-    outputFaceBlendshapes: true,
-    runningMode,
-    numFaces: 1
-  })
-  demosSection.classList.remove("invisible")
+
+  try {
+    const filesetResolver = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+    )
+    faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+      baseOptions: {
+        modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
+        delegate: "GPU"
+      },
+      outputFaceBlendshapes: true,
+      runningMode,
+      numFaces: 1
+    })
+    demosSection.classList.remove("invisible")
+  } catch (err) {
+    console.error(err);
+  }
 }
 await createFaceLandmarker()
 
@@ -1306,6 +1313,33 @@ function updateDeviationDisplay() {
   ))
 }
 
+function drawLastFrame() {
+
+  const canvas = document.getElementById('video_freeze_canvas');
+  const context = canvas.getContext('2d');
+
+  canvas.style.transform =
+      currentFacingMode === "user" ? "scaleX(-1)" : "scaleX(1)";
+
+  const radio = video.videoHeight / video.videoWidth
+  video.style.width = videoWidth + "px"
+  video.style.height = videoWidth * radio + "px"
+  canvas.style.width = videoWidth + "px"
+  canvas.style.height = videoWidth * radio + "px"
+  canvas.width = video.videoWidth
+  canvas.height = video.videoHeight
+
+  context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+  //context.drawImage(video, 0, 0)
+  canvas.style.display = 'block';
+}
+
+function clearLastFrame() {
+  const canvas = document.getElementById('video_freeze_canvas');
+  canvas.style.display = 'none'
+}
+
+
 // Enable the live webcam view and start detection.
 async function enableCam(event) {
   if (!faceLandmarker) {
@@ -1321,7 +1355,15 @@ async function enableCam(event) {
 
   } else {
     webcamRunning = true
+    clearLastFrame()
     enableWebcamButton.innerText = "DISABLE PREDICTIONS"
+  }
+
+  if (currentStream && !webcamRunning) {
+    drawLastFrame()
+    currentStream.getTracks().forEach(track => track.stop());
+    // TODO - display average frame from capture
+    return;
   }
 
   await startCamera();
@@ -1402,6 +1444,7 @@ console.log("===== loaded webcam init code successfully =====")
 // =========== BEGIN CAMERA TOGGLE CODE ======================
 // ===========================================================
 
+/*
 const switchCameraBtn = document.getElementById("switchCamera");
 
 switchCameraBtn.addEventListener("click", async () => {
@@ -1412,6 +1455,22 @@ switchCameraBtn.addEventListener("click", async () => {
     // await startCamera();
     await enableCam()
   }
+});
+*/
+
+
+const switchLightBtn = document.getElementById("toggleLight");
+
+switchLightBtn.addEventListener("click", async () => {
+  console.log("light button clicked")
+
+  currentLightOnStatus =
+    currentLightOnStatus === false ? true : false;
+
+  const constraints = {advanced: [{torch: currentLightOnStatus}]};;
+  const videoTracks = currentStream.getVideoTracks();
+  let track = videoTracks[0];
+  track.applyConstraints(constraints);
 });
 
 console.log("===== loaded camera toggle code successfully =====")
@@ -1456,14 +1515,13 @@ async function predictWebcam() {
   }
   let startTimeMs = performance.now()
   if (lastVideoTime !== video.currentTime) {
-    console.log(video)
     lastVideoTime = video.currentTime
     results = faceLandmarker.detectForVideo(video, startTimeMs)
   }
   if (results.faceLandmarks && results.faceLandmarks[0]) {
     // print the predicted deviation to console
     let deviationResults = calculateDeviation(results.faceLandmarks[0])
-    console.log(deviationResults)
+    //console.log(deviationResults)
 
     if (! Number.isNaN(deviationResults.deviationPD)) {
       qualityControlPassedDeviationResults.push(
