@@ -1286,6 +1286,25 @@ function getMean(numbers) {
   return sum / numbers.length;
 }
 
+function updateDeviationDisplay() {
+  console.log(qualityControlPassedDeviationResults)
+  if (qualityControlPassedDeviationResults.length <= 4) {
+    return console.log("too few measurements, not able to update display")
+    document.getElementById("readout").innerHTML = "too few measurements, unable to predict deviation"
+  }
+  const n = qualityControlPassedDeviationResults.length
+  const mean = getMean(qualityControlPassedDeviationResults)
+  const variance = qualityControlPassedDeviationResults.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (n - 1);
+  const sd = Math.sqrt(variance)
+  document.getElementById("readout").innerHTML = (
+    "Deviation: " + mean +
+    " ± " + sd
+  )
+  console.log((
+    "Deviation: " + mean +
+    " ± " + sd
+  ))
+}
 
 // Enable the live webcam view and start detection.
 async function enableCam(event) {
@@ -1297,35 +1316,12 @@ async function enableCam(event) {
   if (webcamRunning === true) {
     webcamRunning = false
     enableWebcamButton.innerText = "ENABLE PREDICTIONS"
-
-    console.log(qualityControlPassedDeviationResults)
-    if (qualityControlPassedDeviationResults.length > 2) {
-
-
-      const n = qualityControlPassedDeviationResults.length
-      const mean = getMean(qualityControlPassedDeviationResults)
-      const variance = qualityControlPassedDeviationResults.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (n - 1);
-      const sd = Math.sqrt(variance)
-      document.getElementById("readout").innerHTML = (
-        "Deviation: " + mean +
-        " ± " + sd
-      )
-      console.log((
-        "Deviation: " + mean +
-        " ± " + sd
-      ))
-
-    }
+    updateDeviationDisplay()
     qualityControlPassedDeviationResults = []
 
   } else {
     webcamRunning = true
     enableWebcamButton.innerText = "DISABLE PREDICTIONS"
-  }
-
-  if (!webcamRunning && currentStream) {
-    currentStream.getTracks().forEach(track => track.stop());
-    return;
   }
 
   await startCamera();
@@ -1336,11 +1332,16 @@ async function startCamera() {
     currentStream.getTracks().forEach(track => track.stop());
   }
 
+  // webcam always running when startCamera() is called
+  webcamRunning = true
+  enableWebcamButton.innerText = "DISABLE PREDICTIONS"
+
   const constraints = {
     video: {
       facingMode: { ideal: currentFacingMode },
       width: { ideal: 1280 },
       height: { ideal: 720 }
+      //torch: true // *** can be added if you would like to turn on the back camera light
     }
   };
 
@@ -1389,11 +1390,13 @@ function checkCameraZoomCapabilities(){
     document.getElementById("zoomInput").setAttribute("min",min);
     document.getElementById("zoomInput").setAttribute("max",max);
     document.getElementById("zoomInput").value  = 1;
+    // ***TODO*** Set baseline zoom to match 9Gaze settings for consistency
   }else{
     alert("This camera does not support zoom");
   }
 }
 
+console.log("===== loaded webcam init code successfully =====")
 
 // ===========================================================
 // =========== BEGIN CAMERA TOGGLE CODE ======================
@@ -1411,6 +1414,8 @@ switchCameraBtn.addEventListener("click", async () => {
   }
 });
 
+console.log("===== loaded camera toggle code successfully =====")
+
 // ===========================================================
 // =========== BEGIN DRAWING CODE ============================
 // ===========================================================
@@ -1420,6 +1425,17 @@ let lastVideoTime = -1
 let results = undefined
 const drawingUtils = new DrawingUtils(canvasCtx)
 async function predictWebcam() {
+
+  if (webcamRunning === false
+      || video.videoHeight === 0
+      || video.videoWidth === 0) {
+    // guard statement
+    console.log(video.videoHeight)
+    console.log(video.videoWidth)
+    console.log("webcam not running")
+    return
+  }
+
   // set required transform for back and front facing camera support
 
   canvasElement.style.transform =
@@ -1432,6 +1448,7 @@ async function predictWebcam() {
   canvasElement.style.height = videoWidth * radio + "px"
   canvasElement.width = video.videoWidth
   canvasElement.height = video.videoHeight
+
   // Now let's start detecting the stream.
   if (runningMode === "IMAGE") {
     runningMode = "VIDEO"
@@ -1439,6 +1456,7 @@ async function predictWebcam() {
   }
   let startTimeMs = performance.now()
   if (lastVideoTime !== video.currentTime) {
+    console.log(video)
     lastVideoTime = video.currentTime
     results = faceLandmarker.detectForVideo(video, startTimeMs)
   }
@@ -1552,3 +1570,11 @@ function drawBlendShapes(el, blendShapes) {
 
   el.innerHTML = htmlMaker
 }
+
+
+console.log("===== loaded drawing annotation code successfully =====")
+
+console.log("===== loaded all code successfully =====")
+
+
+
