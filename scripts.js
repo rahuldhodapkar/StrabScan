@@ -37,6 +37,8 @@ let currentStream = null;
 
 let currentLightOnStatus = false;
 
+let currentOverlayVisibleStatus = true;
+
 let PREDICTED_DEVIATION_SCALE_FACTOR = 0.34641
 let MAX_NUM_DEVIATION_OBSERVATIONS = 500
 
@@ -1474,6 +1476,34 @@ switchLightBtn.addEventListener("click", async () => {
 });
 
 console.log("===== loaded camera toggle code successfully =====")
+
+
+const toggleOverlayBtn = document.getElementById("toggleOverlay");
+
+toggleOverlayBtn.addEventListener("click", async () => {
+  console.log("toggle overlay button clicked")
+
+  const overlay_canvas = document.getElementById('output_canvas');
+
+  currentOverlayVisibleStatus =
+    currentOverlayVisibleStatus === false ? true : false;
+
+
+  if (currentOverlayVisibleStatus) {
+    overlay_canvas.style.display = 'block'
+  } else {
+    overlay_canvas.style.display = 'none'
+  }
+
+
+  const constraints = {advanced: [{torch: currentLightOnStatus}]};;
+  const videoTracks = currentStream.getVideoTracks();
+  let track = videoTracks[0];
+  track.applyConstraints(constraints);
+});
+
+console.log("===== loaded camera toggle code successfully =====")
+
 
 // ===========================================================
 // =========== BEGIN DRAWING CODE ============================
